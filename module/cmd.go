@@ -3,6 +3,7 @@ package module
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,13 +13,22 @@ import (
 	"time"
 )
 
-func HandleCommand( body types.ReqData, w http.ResponseWriter, r *http.Request) {
-	var commandData []types.CommandData
+var API_PREFIX_cmd = "/api/cmd";
 
-	if err := json.Unmarshal(body.Data, &commandData); err != nil {
-			log.Println("Invalid command data:", err)
-			http.Error(w, "Invalid command data", http.StatusBadRequest)
-			return
+func HandleCommand(resp http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		log.Println("Failed to read request body:", err)
+		http.Error(resp, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	var commandData []types.CommandData
+	if err := json.Unmarshal(body, &commandData); err != nil {
+		log.Println("Invalid request body:", err)
+		http.Error(resp, "Invalid request body", http.StatusBadRequest)
+		return
 	}
 
 	results := make([]types.CommandResponse, 0)
@@ -29,7 +39,7 @@ func HandleCommand( body types.ReqData, w http.ResponseWriter, r *http.Request) 
 			// 一些字段校验
 			if cmd.ID == "" || cmd.Cmd == "" {
 					log.Println("Invalid command:", cmd)
-					http.Error(w, "Invalid command", http.StatusBadRequest)
+					http.Error(resp, "Invalid command", http.StatusBadRequest)
 					return
 			}
 
@@ -63,10 +73,15 @@ func HandleCommand( body types.ReqData, w http.ResponseWriter, r *http.Request) 
 	response, err := json.Marshal(results)
 	if err != nil {
 			log.Println("Error marshaling response:", err)
-			http.Error(w, "Error marshaling response", http.StatusInternalServerError)
+			http.Error(resp, "Error marshaling response", http.StatusInternalServerError)
 			return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(response)
+	resp.WriteHeader(http.StatusOK)
+	resp.Write(response)
+}
+
+func HandleCommand_is_match_route(req *http.Request) bool {
+	var url = req.URL.Path
+	return strings.HasPrefix(url, API_PREFIX_cmd)
 }

@@ -7,72 +7,129 @@ import (
 	"log"
 	"net/http"
 	"proxy-go/types"
+	"proxy-go/store"
 	"strings"
 )
 
+const API_PREFIX_xhr = "/api/xhr"
 
-func HandleXHR( body types.ReqData, w http.ResponseWriter, r *http.Request) {
-	var xhrData types.XHRData
-    if err := json.Unmarshal(body.Data, &xhrData); err != nil {
-        log.Println("Invalid xhr data:", err)
-        http.Error(w, "Invalid xhr data", http.StatusBadRequest)
-        return
-    }
-    log.Printf("Making XHR request: %s %s\n", xhrData.Method, xhrData.URL)
+var Client = http.DefaultClient
 
-    
-    // 设置请求参数
-    req, err := http.NewRequest(xhrData.Method, xhrData.URL, strings.NewReader(xhrData.Body))
-    if err != nil {
-        log.Printf("Error creating request: %s\n", err)
-        http.Error(w, fmt.Sprintf("Error creating request: %s", err), http.StatusInternalServerError)
-        return
-    }
-    // 设置请求头
-    for key, value := range xhrData.Headers {
-        req.Header.Set(key, fmt.Sprintf("%v", value))
-    }
-
-	
-	// 发送自定义请求
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-			log.Printf("Error executing request: %s\n", err)
-			http.Error(w, fmt.Sprintf("Error executing request: %s", err), http.StatusInternalServerError)
-			return
+func HandlerXHR(resp http.ResponseWriter, req *http.Request) {
+	options, errStr := getOptions(req)
+	if errStr != "" {
+		log.Printf("Error getting options: %s\n", errStr)
+		http.Error(resp, fmt.Sprintf("Error getting options: %s", errStr), http.StatusBadRequest)
+		return
 	}
-	defer resp.Body.Close()
+	var url = options.URL
+	var method = options.Method
+	var body = strings.NewReader(options.Body)
+	var headers = options.Headers
+	var isThrowHeaders = options.ThrowHeaders
 
-	respBody, err := io.ReadAll(resp.Body)
+	log.Printf("Making XHR request: %s %s\n", method, url)
+
+	reqOut, err := http.NewRequest(method, url, body)
 	if err != nil {
-			log.Printf("Error reading response body: %s\n", err)
-			http.Error(w, fmt.Sprintf("Error reading response body: %s", err), http.StatusInternalServerError)
-			return
+		log.Printf("Error creating request: %s\n", err)
+		http.Error(resp, fmt.Sprintf("Error creating request: %s", err), http.StatusInternalServerError)
+		return
 	}
 
-	w.WriteHeader(resp.StatusCode)
+	for key, value := range headers {
+		reqOut.Header.Set(key, fmt.Sprintf("%v", value))
+	}
+
+	respOut, err := Client.Do(reqOut)
+	if err != nil {
+		log.Printf("Error executing request: %s\n", err)
+		http.Error(resp, fmt.Sprintf("Error executing request: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	defer respOut.Body.Close()
+
+
 	responseHeaders := make(map[string]string)
-	for key, value := range resp.Header {
-			responseHeaders[key] = value[0]
-			w.Header().Set(key, value[0])
+	for key, values := range respOut.Header {
+		responseHeaders[key] = values[0]
+		resp.Header().Set(key, values[0])
 	}
 
-	var isThrowHeaders bool = xhrData.ThrowHeaders
 	if isThrowHeaders {
-			xhrResponse := types.XHRResponseAll{
-					StatusCode: resp.StatusCode,
-					Headers:    responseHeaders,
-					Body:       string(respBody),
-			}
-			response, err := json.Marshal(xhrResponse)
-			if err != nil {
-					log.Println("Error marshaling response:", err)
-					http.Error(w, "Error marshaling response", http.StatusInternalServerError)
-					return
-			}
-			w.Write(response)
+		respBody, err := io.ReadAll(respOut.Body)
+		xhrResponse := types.XHRResponseAll{
+			StatusCode: respOut.StatusCode,
+			Headers:    responseHeaders,
+			Body:       string(respBody),
+		}
+		response, err := json.Marshal(xhrResponse)
+		if err != nil {
+			log.Println("Error marshaling response:", err)
+			http.Error(resp, "Error marshaling response", http.StatusInternalServerError)
 			return
+		}
+		resp.Write(response)
+		return
 	}
+	
+	if _, err := io.Copy(resp, respOut.Body); err != nil {
+		log.Printf("Error writing response: %s\n", err)
+	}
+	resp.WriteHeader(respOut.StatusCode)
+}
 
-	w.Write(respBody)
+func getOptions(req *http.Request) (types.XHRData, string) {
+    url := req.URL.Path
+    isPassSecret := HandlerXHR_is_pass_secret(req)
+    if req.Method == http.MethodGet {
+        var url_str string
+        if isPassSecret {
+            secret := store.SecretCtl("get", "")
+            url_str = url[len(API_PREFIX_xhr+"/"+secret+"/"):]
+        } else {
+            url_str = url[len(API_PREFIX_xhr+"/"):]
+        }
+        log.Println("url_str:", url_str)
+        if strings.HasPrefix(url_str, "http") {
+            options := types.XHRData{
+                URL: url_str,
+								Method: "GET",
+            }
+						return options, ""
+        } else {
+					var data types.XHRData
+					reader := strings.NewReader(url_str)
+					if err := json.NewDecoder(reader).Decode(&data); err != nil {
+							log.Println("Invalid request body:", err)
+							return types.XHRData{}, "Invalid request body"
+					}
+					return data, ""
+        }
+    } else if req.Method == http.MethodPost {
+			var data types.XHRData
+			if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
+					log.Println("Invalid request body:", err)
+					return types.XHRData{}, "Invalid request body"
+			}
+			return data, ""
+    } else {
+        log.Println("Invalid request method:", req.Method)
+        return types.XHRData{}, "Invalid request method"
+    }
+}
+
+func HandlerXHR_is_match_route(req *http.Request) bool {
+	url := req.URL.Path
+	return strings.HasPrefix(url, API_PREFIX_xhr)
+}
+
+func HandlerXHR_is_pass_secret(req *http.Request) bool {
+	url := req.URL.Path
+	secret := store.SecretCtl("get", "")
+	if url == fmt.Sprintf("%s/%s", API_PREFIX_xhr, secret) {
+		return true
+	}
+	return strings.HasPrefix(url, fmt.Sprintf("%s/%s/", API_PREFIX_xhr, secret))
 }
