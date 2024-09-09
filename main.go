@@ -44,6 +44,8 @@ func handlerRequest(resp http.ResponseWriter, req *http.Request) {
             is_secret_pass = true
         case module.HandlerXHR_is_pass_secret(req):
             is_secret_pass = true
+        case module.HandleCommand_is_pass_secret(req):
+            is_secret_pass = true
     }
     var is_check_secret_header = check_secret_header(req) 
     if !is_check_secret_header && !is_secret_pass {

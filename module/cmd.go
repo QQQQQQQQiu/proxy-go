@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"proxy-go/types"
 	"strings"
+	"proxy-go/store"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func HandleCommand(resp http.ResponseWriter, req *http.Request) {
 	results := make([]types.CommandResponse, 0)
 
 	for _, cmd := range commandData {
-			log.Printf("Executing command: %s\n", cmd.Cmd)
+			// log.Printf("Executing command: %s\n", cmd.Cmd)
 
 			// 一些字段校验
 			if cmd.ID == "" || cmd.Cmd == "" {
@@ -84,4 +85,13 @@ func HandleCommand(resp http.ResponseWriter, req *http.Request) {
 func HandleCommand_is_match_route(req *http.Request) bool {
 	var url = req.URL.Path
 	return strings.HasPrefix(url, API_PREFIX_cmd)
+}
+
+func HandleCommand_is_pass_secret(req *http.Request) bool {
+	url := req.URL.Path
+	secret := store.SecretCtl("get", "")
+	if url == fmt.Sprintf("%s/%s", API_PREFIX_cmd, secret) {
+		return true
+	}
+	return false
 }
