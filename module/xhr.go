@@ -28,9 +28,15 @@ func HandlerXHR(resp http.ResponseWriter, req *http.Request) {
 	var headers = options.Headers
 	var isThrowHeaders = options.ThrowHeaders
 
+	/* for key, value := range req.Header {
+		log.Printf("req header: %s %s\n", key, value)
+	} */
+
 	log.Printf("Making XHR request: %s %s\n", method, url)
 
 	reqOut, err := http.NewRequest(method, url, body)
+	reqOut.Header.Set("User-Agent", "")
+	reqOut.Header.Set("Accept-Encoding", "")
 	if err != nil {
 		log.Printf("Error creating request: %s\n", err)
 		http.Error(resp, fmt.Sprintf("Error creating request: %s", err), http.StatusInternalServerError)
