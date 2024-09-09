@@ -1,7 +1,6 @@
 import {containerModeStr} from '@/store/index';
 import {computed, ref} from 'vue';
 import type {layoutMap as _layoutMap, cmdObj, cmdRespObj} from '@/types/index.d.ts';
-import {EventsMap, addEventListener} from '@/utils/queryDataBus';
 export const layoutMap = {
   small: {
     w: 3,

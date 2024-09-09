@@ -32,6 +32,14 @@ export const loopQueryConroller = {
   stop: () => StopLoopHandle()
 }
 
+export async function proxyFetch (options = {}) {
+  return await myFetch(`http://10.0.0.116:801/api/xhr/xx`, {
+    contentType: 'json',
+    responseType: 'text',
+    method: 'POST',
+    data: options
+  })
+}
 
 async function fetchCmdData() {
   let objArr: fetchCmdDataArgs[] = await emitEventListener(EventsMap.FetchCmdData)
@@ -39,13 +47,11 @@ async function fetchCmdData() {
   let cmdQueueArr: cmdObj[] = []
   cmdQueueArr = objArr.map(item => item.cmdObjArr).flat()
   // console.log('cmdQueueArr :>> ', cmdQueueArr);
-  const res = await myFetch(`http://10.0.0.116:801/api/cmd`,{
+  const res = await myFetch(`http://10.0.0.116:801/api/cmd/xx`,{
     method: 'POST',
     contentType: 'json',
     responseType: 'json',
-    headers: {
-      s: 'xx'
-    },
+    headers: {},
     data: cmdQueueArr,
   })
   // console.log('res :>> ', res);

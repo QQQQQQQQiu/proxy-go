@@ -2,7 +2,7 @@
   <grid :layoutMap="layoutMap" :cmdObjArr="cmdObjArr" :onCmdResp="onCmdResp">
     <template v-slot:default="{size}">
       <div class="w-full h-full" :style="styleComputed.box">
-        <p>公网ipv4：{{ipv4_pub}}%</p>
+        <p>公网ipv4：{{ipv4_pub}}</p>
       </div>
     </template>
   </grid>
@@ -11,8 +11,19 @@
 <script setup lang="ts">
 import grid from '@/components/base/grid/index.vue';
 import {containerModeStr} from '@/store/index';
-import {layoutMap, styleComputed, usedComputed, persent, onCmdResp, cmdObjArr} from './index.ts';
+import {layoutMap, styleComputed,  onCmdResp, cmdObjArr} from './index.ts';
 import {ref} from 'vue';
+import {proxyFetch} from '@/utils/queryDataBus';
+
+let ipv4_pub = ref('')
+async function init() {
+  const res1 = await proxyFetch({
+    url: `http://ipinfo.io/ip`,
+    method: "GET"
+  })
+  ipv4_pub.value = res1
+}
+init()
 
 </script>
 
