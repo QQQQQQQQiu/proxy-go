@@ -80,3 +80,7 @@ export function getElSize (el: HTMLElement) {
     height: el.clientHeight || 0
   }
 }
+
+export function fixNumber(n: number, precision: number) {
+  return Number(n.toFixed(precision))
+}

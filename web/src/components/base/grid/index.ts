@@ -13,10 +13,17 @@ export const boxSize = reactive({
   height: 0
 })
 
-
-export function init (props: {layoutMap: _layoutMap, cmdObjArr: cmdObj[]}) {
-  const layoutMap = props.layoutMap
-  const cmdObjArr = props.cmdObjArr
+interface Props {
+  layoutMap: _layoutMap;
+  cmdObjArr: cmdObj[];
+  onCmdResp: (resp: cmdRespObj[]) => void
+}
+export function init (props: Props) {
+  const {
+    layoutMap,
+    cmdObjArr = [],
+    onCmdResp = () => {}
+  } = props
   const size = reactive({
     width: 0,
     height: 0
@@ -44,8 +51,9 @@ export function init (props: {layoutMap: _layoutMap, cmdObjArr: cmdObj[]}) {
   const stop = addEventListener_queryDataBus(EventsMap_queryDataBus.FetchCmdData, () => {
     return {
       cmdObjArr: cmdObjArr,
-      callback: (cmdRespObjArr: cmdRespObj) => {
-        console.log('addEventListener_queryDataBus callback cmdRespObjArr :>> ', cmdRespObjArr);
+      callback: (cmdRespObjArr: cmdRespObj[]) => {
+        // console.log('addEventListener_queryDataBus callback cmdRespObjArr :>> ', cmdRespObjArr);
+        onCmdResp(cmdRespObjArr);
       }
     }
   })

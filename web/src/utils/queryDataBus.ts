@@ -35,24 +35,24 @@ export const loopQueryConroller = {
 
 async function fetchCmdData() {
   let objArr: fetchCmdDataArgs[] = await emitEventListener(EventsMap.FetchCmdData)
-  console.log('objArr :>> ', objArr);
+  // console.log('objArr :>> ', objArr);
   let cmdQueueArr: cmdObj[] = []
   cmdQueueArr = objArr.map(item => item.cmdObjArr).flat()
-  console.log('cmdQueueArr :>> ', cmdQueueArr);
-  const res = await myFetch(`http://127.0.0.1:801/api`,{
+  // console.log('cmdQueueArr :>> ', cmdQueueArr);
+  const res = await myFetch(`http://10.0.0.116:801/api/cmd`,{
     method: 'POST',
     contentType: 'json',
     responseType: 'json',
-    data: {
-      s: '123',
-      type: 'command',
-      data: cmdQueueArr
+    headers: {
+      s: 'xx'
     },
+    data: cmdQueueArr,
   })
-  console.log('res :>> ', res);
+  // console.log('res :>> ', res);
   for (let index = 0; index < objArr.length; index++) {
     const element = objArr[index];
-    element.callback([{id: 'cmd1', output: 'lssss'}, {id: 'cmd2', output: 'pwdddd'}, {id: 'cmd3', output: 'pwdddd'}])
+    // element.callback([{id: 'cmd1', output: 'lssss'}, {id: 'cmd2', output: 'pwdddd'}, {id: 'cmd3', output: 'pwdddd'}])
+    element.callback(res)
   }
 }
  let StopLoopHandle = ()=>{}

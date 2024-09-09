@@ -2,8 +2,7 @@
   <grid :layoutMap="layoutMap" :cmdObjArr="cmdObjArr" :onCmdResp="onCmdResp">
     <template v-slot:default="{size}">
       <div class="w-full h-full" :style="styleComputed.box">
-        <p>used：{{persent}}%</p>
-        <div class="loader" :style="`--rotate: ${usedComputed.rotate}`"></div>
+        <p>公网ipv4：{{ipv4_pub}}%</p>
       </div>
     </template>
   </grid>

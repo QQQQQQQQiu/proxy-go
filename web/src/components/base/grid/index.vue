@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import {onUnmounted} from 'vue';
 import { boxEl, init } from '@/components/base/grid/index';
-import type {layoutMap, cmdObj} from '@/types/index.d.ts';
+import type {layoutMap, cmdObj, cmdRespObj} from '@/types/index.d.ts';
 
 const props = defineProps({
   layoutMap: {
@@ -19,6 +19,10 @@ const props = defineProps({
   cmdObjArr: {
     type: Object as () => cmdObj[],
     default: () => ([])
+  },
+  onCmdResp: {
+    type: Function,
+    default: () => {}
   },
 })
 
